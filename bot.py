@@ -1,18 +1,18 @@
 import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
-from openai import OpenAI
+from groq import Groq
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not TELEGRAM_TOKEN:
     raise RuntimeError("TELEGRAM_TOKEN is not set")
 
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is not set")
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY is not set")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = Groq(api_key=GROQ_API_KEY)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -22,13 +22,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_text = update.message.text
 
     try:
-        response = client.responses.create(
-            model="gpt-4.1-mini",
-            input=user_text,
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Ты полезный и вежливый ассистент. Отвечай по-русски."},
+                {"role": "user", "content": user_text},
+            ],
+            temperature=0.7,
         )
-        answer = response.output_text
-    except Exception as e:
-        answer = f"Ошибка OpenAI: {e}"
+        answer = response.choices[0].message.content or "Не получилось сформировать ответ."
+    except Exception:
+        answer = "Ошибка доступа к модели. Проверь ключ Groq в Railway."
 
     await update.message.reply_text(answer)
 
