@@ -1,14 +1,25 @@
 import os
-
-print("DEBUG TELEGRAM_TOKEN exists:", bool(os.getenv("TELEGRAM_TOKEN")))
-print("DEBUG OPENAI_API_KEY exists:", bool(os.getenv("OPENAI_API_KEY")))
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
+from openai import OpenAI
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-if not TELEGRAM_TOKEN:
-    print("ENV KEYS:", sorted(list(os.environ.keys())))
-    raise RuntimeError("TELEGRAM_TOKEN is not set")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is not set")
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=user_text
+    )
+
+    await update.message.reply_text(response.output_text)
+
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+app.add_handler(MessageHandler(filters.TEXT, handle_message))
+
+print("Бот запущен...")
+app.run_polling()
